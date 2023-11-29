@@ -425,7 +425,7 @@ class File < LogStash::Inputs::Base
 
   def build_sincedb_base_from_settings(settings)
     logstash_data_path = settings.get_value("path.data")
-    Pathname.new(logstash_data_path).join("plugins", "inputs", "file").tap do |path|
+    Pathname.new(logstash_data_path).join("plugins", "inputs", "tika").tap do |path|
       # Ensure that the filepath exists before writing, since it's deeply nested.
       path.mkpath
     end
