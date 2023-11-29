@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 require "helpers/spec_helper"
-require "logstash/inputs/file"
+require "logstash/inputs/tika"
 
 # LogStash::Logging::Logger::configure_logging("DEBUG")
 

@@ -1,3 +1,18 @@
+# Usage
+
+使用方法:
+```sh
+bin/logstash -e 'input{ tika{path => ["/data/demo/*.PDF"]   mode=> "tika"  } } output { stdout { codec => rubydebug } }'
+```
+
+
+说明：
+基于logstash-input-file集成，所以参数上面可以共用
+注意点：lib/jars下必不可少的文件： filewatch-1.0.11.jar、tika-app-2.9.1.jar tika-config.xml  三个文件不能缺失，不然GG
+
+
+
+
 # Logstash Plugin
 Travis Build
 [![Travis Build Status](https://travis-ci.com/logstash-plugins/logstash-input-file.svg)](https://travis-ci.com/logstash-plugins/logstash-input-file)

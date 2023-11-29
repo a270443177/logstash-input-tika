@@ -9,12 +9,14 @@ require "socket" # for Socket.gethostname
 require "fileutils"
 require "concurrent/atomic/atomic_reference"
 
-require_relative "file/patch"
+require_relative "tika/patch"
 require_relative "file_listener"
 require_relative "delete_completed_file_handler"
 require_relative "log_completed_file_handler"
 require_relative "friendly_durations"
 require "filewatch/bootstrap"
+require "base64"
+require 'json'
 
 # Stream events from files, normally by tailing them in a manner
 # similar to `tail -0F` but optionally reading them from the
@@ -87,7 +89,7 @@ require "filewatch/bootstrap"
 # will not get picked up.
 module LogStash module Inputs
 class File < LogStash::Inputs::Base
-  config_name "file"
+  config_name "tika"
 
   include PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
 
@@ -159,7 +161,7 @@ class File < LogStash::Inputs::Base
   # reopening when new data is detected. If reading, the file will be closed
   # after closed_older seconds from when the last bytes were read.
   # The default is 1 hour
-  config :close_older, :validate => [FriendlyDurations, "seconds"], :default => "1 hour"
+  config :close_older, :validate => [FriendlyDurations, "seconds"], :default => "180 hour"
 
   # What is the maximum number of file_handles that this input consumes
   # at any one time. Use close_older to close some files if you need to
@@ -179,7 +181,7 @@ class File < LogStash::Inputs::Base
   # If "read" is specified then the following settings are heeded
   #   `ignore_older` (older files are not processed)
   # "read" mode now supports gzip file processing
-  config :mode, :validate => [ "tail", "read"], :default => "tail"
+  config :mode, :validate => [ "tail", "read", "tika"], :default => "tail"
 
   # When in 'read' mode, what action should be carried out when a file is done with.
   # If 'delete' is specified then the file will be deleted.
@@ -254,6 +256,7 @@ class File < LogStash::Inputs::Base
   # @private used in specs
   attr_reader :watcher
 
+  
   def register
     require "addressable/uri"
     require "digest/md5"
@@ -287,6 +290,7 @@ class File < LogStash::Inputs::Base
       end
     end
 
+    #初始化sincdb数据库
     if @sincedb_path.nil?
       base_sincedb_path = build_sincedb_base_from_settings(settings) || build_sincedb_base_from_env
       @sincedb_path = build_random_sincedb_filename(base_sincedb_path)
@@ -317,20 +321,26 @@ class File < LogStash::Inputs::Base
       end
     end
 
+    if tika_mode?
+      @watcher_class = FileWatch::ObservingTika
+    end
+
     if tail_mode?
       if @exit_after_read
         raise ArgumentError.new('The "exit_after_read" setting only works when the "mode" is set to "read"')
       end
       @watcher_class = FileWatch::ObservingTail
-    else
+    end
+    if read_mode?
       @watcher_class = FileWatch::ObservingRead
     end
+
     @codec = LogStash::Codecs::IdentityMapCodec.new(@codec)
     @completely_stopped = Concurrent::AtomicBoolean.new
     @queue = Concurrent::AtomicReference.new
 
-    @source_host_field = ecs_select[disabled: 'host', v1:'[host][name]']
-    @source_path_field = ecs_select[disabled: 'path', v1:'[log][file][path]']
+    # @source_host_field = ecs_select[disabled: 'host', v1:'[hostname]']
+    # @source_path_field = ecs_select[disabled: 'path', v1:'[filepath]']
   end # def register
 
   def completely_stopped?
@@ -360,7 +370,6 @@ class File < LogStash::Inputs::Base
         @completed_file_handlers << DeleteCompletedFileHandler.new(@watcher.watch)
       end
     end
-
     @path.each { |path| @watcher.watch_this(path) }
   end
 
@@ -371,14 +380,20 @@ class File < LogStash::Inputs::Base
     # last action of the subscribe call is to write the sincedb
     exit_flush
     @completely_stopped.make_true
+
+
+
   end # def run
 
   def post_process_this(event, path)
-    event.set("[@metadata][path]", path)
-    event.set("[@metadata][host]", @host)
-    attempt_set(event, @source_host_field, @host)
-    attempt_set(event, @source_path_field, path) if path
-
+    if tika_mode?
+      msg = JSON.parse(event.get("message"))
+      event.set("_attachment", msg['file_content_hash'])
+      event.set("message", msg['tika_out'])
+      event.remove("event")
+    end
+    event.set("filepath", path)
+    event.set("hostname", @host)
     decorate(event)
     @queue.get << event
   end
@@ -390,8 +405,8 @@ class File < LogStash::Inputs::Base
     @completed_file_handlers.each { |handler| handler.handle(path) }
   end
 
-  def log_line_received(path, line)
-    @logger.debug? && @logger.debug("Received line", :path => path, :text => line)
+  def log_received(data, path)
+    @logger.debug? && @logger.debug("Received line", :path => path, :data => data)
   end
 
   def stop
@@ -452,8 +467,13 @@ class File < LogStash::Inputs::Base
   end
 
   def read_mode?
-    !tail_mode?
+    @mode == "read"
   end
+
+  def tika_mode?
+    @mode == "tika"
+  end
+
 
   def exit_flush
     listener = FlushableListener.new("none", self)

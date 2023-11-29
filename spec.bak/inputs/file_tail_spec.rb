@@ -2,7 +2,7 @@
 
 require "helpers/spec_helper"
 require "logstash/devutils/rspec/shared_examples"
-require "logstash/inputs/file"
+require "logstash/inputs/tika"
 require "logstash/plugin_mixins/ecs_compatibility_support/spec_helper"
 
 require "json"

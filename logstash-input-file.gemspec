@@ -1,9 +1,9 @@
 Gem::Specification.new do |s|
 
-  s.name            = 'logstash-input-file'
+  s.name            = 'logstash-input-tika'
   s.version         = '4.4.5'
   s.licenses        = ['Apache-2.0']
-  s.summary         = "Streams events from files"
+  s.summary         = "Streams events from tika"
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
   s.authors         = ["Elastic"]
   s.email           = 'info@elastic.co'
@@ -31,9 +31,9 @@ Gem::Specification.new do |s|
     s.add_runtime_dependency 'addressable'
   end
 
-  s.add_runtime_dependency 'concurrent-ruby', '~> 1.0'
+  s.add_runtime_dependency 'concurrent-ruby'
   s.add_runtime_dependency 'logstash-codec-multiline', ['~> 3.0']
-  s.add_runtime_dependency 'logstash-mixin-ecs_compatibility_support', '~>1.3'
+  s.add_runtime_dependency 'logstash-mixin-ecs_compatibility_support'
 
   s.add_development_dependency 'stud', ['~> 0.0.19']
   s.add_development_dependency 'logstash-devutils'

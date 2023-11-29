@@ -78,4 +78,5 @@ module FileWatch
   require_relative "observing_base"
   require_relative "observing_tail"
   require_relative "observing_read"
+  require_relative "observing_tika"
 end

@@ -35,9 +35,11 @@ module LogStash module Inputs
 
     def accept(data)
       # and push transient data filled dup listener downstream
-      input.log_line_received(path, data)
+      input.log_received(data, path)
       input.codec.accept(self.class.new(path, input, data))
     end
+
+
 
     def process_event(event)
       input.post_process_this(event, path)
