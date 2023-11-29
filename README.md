@@ -10,6 +10,8 @@ bin/logstash -e 'input{ tika{path => ["/data/demo/*.PDF"]   mode=> "tika"  } } o
 基于logstash-input-file集成，所以参数上面可以共用
 注意点：lib/jars下必不可少的文件： filewatch-1.0.11.jar、tika-app-2.9.1.jar tika-config.xml  三个文件不能缺失，不然GG
 
+增加一个字段：
+keep_source   用于是否将源文件通过base64写入到消息中
 
 
 

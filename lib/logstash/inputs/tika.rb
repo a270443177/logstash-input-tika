@@ -238,6 +238,9 @@ class File < LogStash::Inputs::Base
   # If not specified to true, and the file is corrupted, could end in cyclic processing of the broken file.
   config :check_archive_validity, :validate => :boolean, :default => false
 
+  #是否将源文件通过base64形成字段
+  config :keep_source, :validate => :boolean, :default => false 
+
   public
 
   class << self
@@ -388,11 +391,13 @@ class File < LogStash::Inputs::Base
   def post_process_this(event, path)
     if tika_mode?
       msg = JSON.parse(event.get("message"))
-      event.set("_attachment", msg['file_content_hash'])
+      if @keep_source
+          event.set("_attachement", msg['file_content_hash'])
+      end
       event.set("message", msg['tika_out'])
       event.remove("event")
     end
-    event.set("filepath", path)
+    event.set("filename", path)
     event.set("hostname", @host)
     decorate(event)
     @queue.get << event
