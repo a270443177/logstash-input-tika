@@ -22,7 +22,7 @@ class RubyTikaApp
     @document = if (document =~ %r{https?:\/\/[\S]+}) == 0
                   document
                 else
-                  "file://#{document}"
+                  "#{document}"
                 end
 
 
